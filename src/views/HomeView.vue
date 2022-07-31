@@ -69,14 +69,21 @@ onMounted(() => {
   });
 });
 
-//-------------拖拽
+const libraryArr = [...new Array(8).keys()].map((e) => ({ id: e }));
+
+//-------------拖拽、数据核心
+// TODO:禁止自己拖入自己，从组件区域拖出去再拖入自己区域时候图标应该是禁止，不应该是默认的
 const DRAG_DATA_CONSTANTS = {
   dataTransferKey: "componentName",
 };
 
-function onPhoneDragEnter() {}
+function onPhoneDragEnter(e: DragEvent) {
+  console.log(e.dataTransfer!.getData(DRAG_DATA_CONSTANTS.dataTransferKey));
+}
 
-function onPhoneDragLeave() {}
+function onPhoneDragOver(e: DragEvent) {
+  e.preventDefault();
+}
 
 function onPhoneDragDrop(e: DragEvent) {
   console.log(e.dataTransfer!.getData(DRAG_DATA_CONSTANTS.dataTransferKey));
@@ -85,6 +92,23 @@ function onPhoneDragDrop(e: DragEvent) {
 function onLibraryComponentDragStart(e: DragEvent) {
   e.dataTransfer!.setData(DRAG_DATA_CONSTANTS.dataTransferKey, "test");
 }
+
+const phoneLibraryComponentsDragData = ref<Record<string, unknown>[]>([
+  { name: "John 1", id: 0 },
+  { name: "Joao 2", id: 1 },
+  { name: "Jean 3", id: 2 },
+]);
+</script>
+
+<script lang="ts">
+//-------------拖拽、数据核心
+import draggable from "vuedraggable";
+
+export default {
+  components: {
+    draggable,
+  },
+};
 </script>
 
 <template>
@@ -113,52 +137,56 @@ function onLibraryComponentDragStart(e: DragEvent) {
               <el-collapse>
                 <!--                表单组件-->
                 <el-collapse-item title="表单">
-                  <el-row>
-                    <el-col
-                      v-for="(e, index) in new Array(10)"
-                      :key="index"
-                      :span="12"
-                    >
-                      <div
-                        class="button library-component"
-                        draggable="true"
-                        @dragstart="onLibraryComponentDragStart"
-                      >
-                        <div class="component-icon">
-                          <el-icon :size="16">
-                            <Aim />
-                          </el-icon>
-                        </div>
-                        <div class="desc">按钮</div>
-                        <div class="ask-icon">
-                          <el-tooltip
-                            effect="light"
-                            placement="right"
-                            popper-class="tips-wrapper"
-                          >
-                            <template #default>
-                              <el-icon :size="16">
-                                <QuestionFilled />
-                              </el-icon>
-                            </template>
-                            <template #content>
-                              <div class="tips-panel">
-                                <div class="tips-title">按钮</div>
-                                <div class="tips-desc">
-                                  用来展示一个按钮，你可以配置不同的展示样式，配置不同的点击行为。
+                  <draggable
+                    :group="{ name: 'library', pull: 'clone', put: false }"
+                    :list="libraryArr"
+                    :sort="false"
+                    class="library-list"
+                    item-key="id"
+                  >
+                    <template #item="{ element }">
+                      <div class="library-item">
+                        <div class="drag-wrapper button library-component">
+                          <div class="component-icon">
+                            <el-icon :size="16">
+                              <Aim />
+                            </el-icon>
+                          </div>
+                          <div class="desc">按钮{{ element.id }}</div>
+                          <div class="ask-icon">
+                            <el-tooltip
+                              effect="light"
+                              placement="right"
+                              popper-class="tips-wrapper"
+                            >
+                              <template #default>
+                                <el-icon :size="16">
+                                  <QuestionFilled />
+                                </el-icon>
+                              </template>
+                              <template #content>
+                                <div class="tips-panel">
+                                  <div class="tips-title">按钮</div>
+                                  <div class="tips-desc">
+                                    用来展示一个按钮，你可以配置不同的展示样式，配置不同的点击行为。
+                                  </div>
+                                  <div class="tips-preview">
+                                    <el-button>Default</el-button>
+                                    <el-button type="primary"
+                                      >Primary
+                                    </el-button>
+                                    <el-button type="success"
+                                      >Success
+                                    </el-button>
+                                  </div>
                                 </div>
-                                <div class="tips-preview">
-                                  <el-button>Default</el-button>
-                                  <el-button type="primary">Primary</el-button>
-                                  <el-button type="success">Success</el-button>
-                                </div>
-                              </div>
-                            </template>
-                          </el-tooltip>
+                              </template>
+                            </el-tooltip>
+                          </div>
                         </div>
                       </div>
-                    </el-col>
-                  </el-row>
+                    </template>
+                  </draggable>
                 </el-collapse-item>
                 <!--                按钮组件-->
                 <el-collapse-item title="按钮"> 333</el-collapse-item>
@@ -178,14 +206,22 @@ function onLibraryComponentDragStart(e: DragEvent) {
 
         <!--        中间手机模型-->
         <div class="panel panel-main h-full">
-          <div class="phone-wrapper">
-            <div
+          <div
+            class="phone-wrapper"
+            @dragenter="onPhoneDragEnter"
+            @dragover="onPhoneDragOver"
+            @drop="onPhoneDragDrop"
+          >
+            <draggable
+              :list="phoneLibraryComponentsDragData"
               class="phone"
-              @dragenter="onPhoneDragEnter"
-              @dragleave="onPhoneDragLeave"
-              @dragover="(e:DragEvent)=>{e.preventDefault()}"
-              @drop="onPhoneDragDrop"
-            ></div>
+              group="library"
+              item-key="id"
+            >
+              <template #item="{ element }">
+                <div>{{ element.name }}</div>
+              </template>
+            </draggable>
           </div>
         </div>
 
@@ -224,6 +260,14 @@ function onLibraryComponentDragStart(e: DragEvent) {
 .tips-panel {
   max-width: 328px;
   min-height: 80px;
+}
+
+//左侧组件列表展示
+.library-list {
+  @apply flex flex-wrap;
+  .library-item {
+    flex: 0 0 50%;
+  }
 }
 
 .main-wrapper {
